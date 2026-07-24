@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>myIOT — Device Config</title>
+<style>
+:root{--bg:#12161B;--panel:#1A2029;--panel-edge:#262E39;--text:#D7DEE6;--text-dim:#7C8898;
+--amber:#E8A33D;--amber-dim:#4A3A1E;--teal:#3FD8B4;--red:#E8543D;
+--mono:"SFMono-Regular","Consolas","Menlo",monospace;--sans:-apple-system,"Segoe UI",Roboto,sans-serif;}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(circle at 15% 0%,#1a2028 0%,var(--bg) 45%);color:var(--text);
+font-family:var(--sans);min-height:100vh;padding:28px 16px 60px}
+.wrap{max-width:480px;margin:0 auto}
+header{margin-bottom:16px}
+.device-id{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--text-dim);
+text-transform:uppercase;margin:0 0 4px}
+h1{font-size:22px;font-weight:650;margin:0 0 14px;letter-spacing:-.01em}
+h1 span{color:var(--amber)}
+.led-rail{display:flex;gap:10px;background:var(--panel);border:1px solid var(--panel-edge);
+border-radius:10px;padding:12px 14px}
+.led{flex:1;display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;
+letter-spacing:.04em;color:var(--text-dim)}
+.dot{width:8px;height:8px;border-radius:50%;background:#3A4250;flex-shrink:0}
+.dot.on{background:var(--teal);box-shadow:0 0 6px rgba(63,216,180,.7)}
+.dot.warn{background:var(--amber);box-shadow:0 0 6px rgba(232,163,61,.7)}
+.dot.off{background:var(--red);box-shadow:0 0 6px rgba(232,84,61,.5)}
+
+.tabs{display:flex;gap:6px;margin:16px 0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab-btn{flex-shrink:0;font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--text-dim);
+background:transparent;border:1px solid var(--panel-edge);border-radius:8px;padding:8px 14px;
+cursor:pointer;white-space:nowrap;transition:all .15s ease}
+.tab-btn.active{background:var(--amber-dim);border-color:var(--amber);color:var(--amber)}
+.tab-btn:hover:not(.active){color:var(--text);border-color:var(--text-dim)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+section{background:var(--panel);border:1px solid var(--panel-edge);border-radius:12px;
+padding:18px 18px 6px;margin-top:16px}
+.tab-content>section:first-child{margin-top:0}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px}
+.sec-title{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text)}
+.sec-note{font-family:var(--mono);font-size:10.5px;color:var(--text-dim)}
+.field{margin-bottom:14px}
+label{display:block;font-size:12px;color:var(--text-dim);margin-bottom:6px}
+input[type=text],input[type=password]{width:100%;background:#0F1319;border:1px solid var(--panel-edge);
+border-radius:7px;padding:10px 11px;color:var(--text);font-family:var(--mono);font-size:13px;
+outline:none;transition:border-color .15s ease}
+input:focus{border-color:var(--amber)}
+input[readonly]{color:var(--text-dim);cursor:not-allowed;background:#0B0E13}
+input::placeholder{color:#4C5768}
+.row2{display:flex;gap:10px}
+.row2 .field{flex:1}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0 14px;
+border-top:1px solid var(--panel-edge);gap:14px}
+.toggle-row:first-child{border-top:none}
+.toggle-label{font-size:13px}
+.toggle-sub{font-size:11px;color:var(--text-dim);margin-top:2px}
+.switch{position:relative;width:40px;height:22px;background:#0F1319;border:1px solid var(--panel-edge);
+border-radius:20px;cursor:pointer;flex-shrink:0}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;
+background:var(--text-dim);transition:all .15s ease}
+.switch.active{background:var(--amber-dim);border-color:var(--amber)}
+.switch.active::after{left:20px;background:var(--amber)}
+input[type=text].mini-input{width:58px;min-width:58px;text-align:center;background:#0F1319;border:1px solid var(--panel-edge);
+border-radius:7px;padding:8px 6px;color:var(--text);font-family:var(--mono);font-size:13px;
+outline:none;flex-shrink:0}
+.mini-input:focus{border-color:var(--amber)}
+.topic-list{font-family:var(--mono);font-size:12px;background:#0F1319;border:1px solid var(--panel-edge);
+border-radius:7px;padding:10px 12px;color:var(--text-dim);line-height:1.9;margin-bottom:14px}
+.topic-list .k{color:var(--teal);display:inline-block;min-width:150px}
+.actions{display:flex;gap:10px;margin:24px 0 0}
+button{font-family:var(--sans);font-size:13.5px;font-weight:600;padding:12px 16px;border-radius:8px;
+border:none;cursor:pointer;transition:opacity .15s ease,transform .05s ease}
+button:disabled{opacity:.5;cursor:default}
+button:active:not(:disabled){transform:scale(.98)}
+.btn-primary{background:var(--amber);color:#1A1200;flex:1}
+.btn-primary:hover:not(:disabled){opacity:.92}
+.btn-ghost{background:transparent;color:var(--text-dim);border:1px solid var(--panel-edge)}
+.btn-ghost:hover{color:var(--text);border-color:var(--text-dim)}
+footer{text-align:center;font-family:var(--mono);font-size:10.5px;color:#4C5768;margin-top:26px;
+letter-spacing:.04em}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+background:var(--panel);border:1px solid var(--amber);color:var(--text);font-size:13px;
+padding:11px 18px;border-radius:8px;opacity:0;transition:all .25s ease;font-family:var(--mono);
+pointer-events:none;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{border-color:var(--red)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="device-id" id="deviceId">connecting&hellip;</p>
+    <h1 id="deviceTitle">Device <span>Config</span></h1>
+    <div class="led-rail">
+      <div class="led"><span class="dot" id="ledWifi"></span>WIFI</div>
+      <div class="led"><span class="dot" id="ledMqtt"></span>MQTT</div>
+      <div class="led"><span class="dot" id="ledNtp"></span>NTP</div>
+      <div class="led"><span class="dot" id="ledOta"></span>OTA</div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="status">Status</button>
+    <button class="tab-btn" data-tab="network">Network</button>
+    <button class="tab-btn" data-tab="topics">Topics</button>
+    <button class="tab-btn" data-tab="behavior">Behavior</button>
+    <button class="tab-btn" id="tabBtnTerminal" data-tab="terminal" style="display:none">Terminal</button>
+  </div>
+
+  <div class="tab-content active" data-tab="status">
+    <section>
+      <div class="sec-head"><span class="sec-title">Status</span><span class="sec-note">mirrors serial boot log</span></div>
+      <div class="topic-list" id="statusList">&hellip;</div>
+    </section>
+
+    <section>
+      <div class="sec-head"><span class="sec-title">Device</span><span class="sec-note"></span></div>
+      <div class="field"><label>Device name</label><input type="text" id="deviceName" maxlength="31" placeholder="e.g. Bedroom Curtain"></div>
+      <div class="field"><label>Timezone (POSIX TZ string)</label><input type="text" id="timezone" maxlength="47" placeholder="IST-2IDT,M3.4.4/26,M10.5.0"></div>
+    </section>
+  </div>
+
+  <div class="tab-content" data-tab="network">
+    <section>
+      <div class="sec-head"><span class="sec-title">Wi-Fi</span><span class="sec-note"></span></div>
+      <div class="field"><label>Network name (SSID)</label><input type="text" id="ssid" maxlength="31" placeholder="loading..."></div>
+      <div class="field"><label>Password</label><input type="password" id="wifiPwd" maxlength="63" placeholder="unchanged"></div>
+    </section>
+
+    <section>
+      <div class="sec-head"><span class="sec-title">MQTT Broker</span><span class="sec-note" id="mqttPortNote">1883</span></div>
+      <div class="row2">
+        <div class="field"><label>Broker host</label><input type="text" id="mqttHost" maxlength="39" placeholder="loading..."></div>
+        <div class="field"><label>Port</label><input type="text" id="mqttPort" maxlength="5" placeholder="1883"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Username</label><input type="text" id="mqttUser" maxlength="31" placeholder="loading..."></div>
+        <div class="field"><label>Password</label><input type="password" id="mqttPwd" maxlength="63" placeholder="unchanged"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="tab-content" data-tab="topics">
+    <section>
+      <div class="sec-head"><span class="sec-title">Topics</span><span class="sec-note" id="topicsReadyNote">&hellip;</span></div>
+      <div class="field"><label>Command topic (required)</label><input type="text" id="topicSubCmd" maxlength="63" placeholder="myHome/DeviceName"></div>
+      <div class="field"><label>Availability topic (derived)</label><input type="text" id="topicPubAvail" maxlength="63" readonly></div>
+      <div class="field"><label>State topic (derived)</label><input type="text" id="topicPubState" maxlength="63" readonly></div>
+      <div class="field"><label>Messages topic (optional)</label><input type="text" id="topicGenMessages" maxlength="63" placeholder="myHome/Messages"></div>
+      <div class="field"><label>Log topic (optional)</label><input type="text" id="topicGenLog" maxlength="63" placeholder="myHome/log"></div>
+      <div class="field"><label>Debug topic (optional)</label><input type="text" id="topicGenDebug" maxlength="63" placeholder="myHome/debug"></div>
+    </section>
+  </div>
+
+  <div class="tab-content" data-tab="behavior">
+    <section>
+      <div class="sec-head"><span class="sec-title">Device Behavior</span><span class="sec-note"></span></div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Serial logging</div><div class="toggle-sub">Mirror log output to USB serial</div></div>
+        <div class="switch" id="swSerial" data-key="useSerial"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">OTA updates</div><div class="toggle-sub">Accept firmware pushes on local network</div></div>
+        <div class="switch" id="swOta" data-key="otaEnabled"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Web terminal</div><div class="toggle-sub">Capture serial output for viewing in the Terminal tab (~4KB RAM, reboot to apply)</div></div>
+        <div class="switch" id="swTerminal" data-key="terminalEnabled"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Reset-safety</div><div class="toggle-sub">Fall back to a minimal topic set after repeated crash-loops</div></div>
+        <div class="switch" id="swResetSafety" data-key="resetSafetyEnabled"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Ignore boot message</div><div class="toggle-sub">Suppress the "PowerON Boot" MQTT log line</div></div>
+        <div class="switch" id="swIgnoreBootMsg" data-key="ignoreBootMsg"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Flash parameters</div><div class="toggle-sub">Enable the on-flash parameter file system</div></div>
+        <div class="switch" id="swUseFlashP" data-key="useFlashP"></div>
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Net-loss reset</div><div class="toggle-sub">Minutes of no network before rebooting (0 = never)</div></div>
+        <input type="text" id="noNetworkResetMinutes" maxlength="3" class="mini-input">
+      </div>
+      <div class="toggle-row">
+        <div><div class="toggle-label">Reset-safety threshold</div><div class="toggle-sub">Consecutive failed boots before it triggers</div></div>
+        <input type="text" id="resetSafetyThreshold" maxlength="2" class="mini-input">
+      </div>
+    </section>
+  </div>
+
+  <div class="tab-content" data-tab="terminal">
+    <section id="terminalSection">
+      <div class="sec-head"><span class="sec-title">Terminal</span><span class="sec-note" id="terminalNote">polling&hellip;</span></div>
+      <pre id="terminalOutput" style="background:#0B0E13;border:1px solid var(--panel-edge);border-radius:7px;
+        padding:10px 12px;font-family:var(--mono);font-size:11.5px;color:var(--text-dim);line-height:1.5;
+        max-height:280px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;margin:0">&hellip;</pre>
+    </section>
+  </div>
+
+  <div class="actions">
+    <button class="btn-ghost" id="btnDiscard">Discard</button>
+    <button class="btn-primary" id="btnSave">Save changes</button>
+  </div>
+  <div class="actions">
+    <button class="btn-ghost" id="btnReboot" style="width:100%;border-color:var(--red);color:var(--red)">Reboot device</button>
+  </div>
+
+  <footer>myIOT v3 &middot; served locally, no cloud round-trip</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var toggles = {};
+  var lastConfig = null;
+
+  function $(id){ return document.getElementById(id); }
+
+  function showToast(msg, isErr){
+    var t = $('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isErr ? ' err' : '');
+    setTimeout(function(){ t.className = 'toast'; }, 2600);
+  }
+
+  function setDot(id, state){
+    // state: 'on' | 'warn' | 'off'
+    $(id).className = 'dot ' + state;
+  }
+
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Tabs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // Purely client-side — the device serves one static payload regardless
+  // of which tab is showing, so this costs nothing on the MCU side.
+  document.querySelectorAll('.tab-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var target = btn.dataset.tab;
+      document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.toggle('active', b === btn); });
+      document.querySelectorAll('.tab-content').forEach(function(c){
+        c.classList.toggle('active', c.dataset.tab === target);
+      });
+    });
+  });
+
+  function isTerminalTabActive(){
+    var c = document.querySelector('.tab-content[data-tab="terminal"]');
+    return c && c.classList.contains('active');
+  }
+
+  function switchToTab(name){
+    var btn = document.querySelector('.tab-btn[data-tab="' + name + '"]');
+    if (btn) btn.click();
+  }
+
+  function applyStatus(s){
+    $('deviceId').textContent = s.deviceId + ' \u00b7 ' + s.primaryTopic;
+    setDot('ledWifi', s.wifiConnected ? 'on' : 'off');
+    setDot('ledMqtt', s.mqttConnected ? 'on' : 'off');
+    setDot('ledNtp',  s.ntpSynced ? 'on' : 'warn');
+    setDot('ledOta',  s.otaActive ? 'on' : 'off');
+
+    var rows = [
+      ['ESP type', s.espType],
+      ['Reset-safety', s.resetSafetyEnabled ? 'on' : 'off'],
+      ['Ignore boot msg', s.ignoreBootMsg ? 'yes' : 'no'],
+      ['Flash params', s.useFlashP ? 'on' : 'off'],
+      ['Net-loss reset', s.noNetworkResetMinutes > 0 ? (s.noNetworkResetMinutes + ' min') : 'off']
+    ];
+    if (s.resetSafetyEnabled){
+      rows.push(['Reset-safety counter', String(s.resetSafetyCounter)]);
+      rows.push(['Last boot', s.resetSafetyBootWasNormal ? 'normal' : 'failure']);
+    }
+    if (s.customStatus && s.customStatus.length){
+      s.customStatus.forEach(function(row){ rows.push([row.label, row.value]); });
+    }
+    $('statusList').innerHTML = rows.map(function(r){
+      return '<div><span class="k">' + r[0] + '</span> ' + r[1] + '</div>';
+    }).join('');
+  }
+
+  function applyConfig(c){
+    lastConfig = c;
+    $('deviceName').value = c.deviceName || '';
+    $('timezone').value = c.timezone || '';
+    $('deviceTitle').innerHTML = c.deviceName
+      ? c.deviceName.replace(/</g, '&lt;') + ' <span>Config</span>'
+      : 'Device <span>Config</span>';
+    $('ssid').value = c.ssid || '';
+    $('mqttHost').value = c.mqttHost || '';
+    $('mqttPort').value = c.mqttPort || 1883;
+    $('mqttUser').value = c.mqttUser || '';
+    // password fields intentionally left blank — device never echoes secrets back
+    $('wifiPwd').placeholder = c.wifiPwdSet ? 'unchanged (set)' : 'not set';
+    $('mqttPwd').placeholder = c.mqttPwdSet ? 'unchanged (set)' : 'not set';
+
+    setToggle('swSerial', c.useSerial);
+    setToggle('swOta', c.otaEnabled);
+    setToggle('swTerminal', c.terminalEnabled);
+    setToggle('swResetSafety', c.resetSafetyEnabled);
+    setToggle('swIgnoreBootMsg', c.ignoreBootMsg);
+    setToggle('swUseFlashP', c.useFlashP);
+    $('noNetworkResetMinutes').value = c.noNetworkResetMinutes;
+    $('resetSafetyThreshold').value = c.resetSafetyThreshold;
+
+    var termBtn = $('tabBtnTerminal');
+    termBtn.style.display = c.terminalEnabled ? '' : 'none';
+    if (!c.terminalEnabled && isTerminalTabActive()) switchToTab('status');
+
+    $('topicSubCmd').value = c.topicSubCmd || '';
+    $('topicGenMessages').value = c.topicGenMessages || '';
+    $('topicGenLog').value = c.topicGenLog || '';
+    $('topicGenDebug').value = c.topicGenDebug || '';
+    $('topicsReadyNote').textContent = c.topicsReady ? 'active' : 'not set — MQTT idle';
+
+    deriveFromCmd(); // Avail/State are always <cmd>/Avail and <cmd>/State — no exceptions
+  }
+
+  function deriveFromCmd(){
+    var cmd = $('topicSubCmd').value.trim();
+    $('topicPubAvail').value = cmd ? cmd + '/Avail' : '';
+    $('topicPubState').value = cmd ? cmd + '/State' : '';
+  }
+
+  $('topicSubCmd').addEventListener('input', deriveFromCmd);
+
+  function setToggle(id, val){
+    toggles[id] = !!val;
+    $(id).className = 'switch' + (val ? ' active' : '');
+  }
+
+  document.querySelectorAll('.switch').forEach(function(sw){
+    sw.addEventListener('click', function(){
+      var v = !toggles[sw.id];
+      toggles[sw.id] = v;
+      sw.className = 'switch' + (v ? ' active' : '');
+    });
+  });
+
+  function refreshStatus(){
+    fetch('/status').then(function(r){ return r.json(); }).then(applyStatus)
+      .catch(function(){ /* device may be mid-reconnect; ignore single failed poll */ });
+  }
+
+  function refreshLog(){
+    if (!isTerminalTabActive()) return; // don't poll a tab that isn't showing
+    fetch('/log').then(function(r){ return r.text(); }).then(function(text){
+      var el = $('terminalOutput');
+      var wasAtBottom = (el.scrollTop + el.clientHeight >= el.scrollHeight - 10);
+      el.textContent = text;
+      if (wasAtBottom) el.scrollTop = el.scrollHeight; // keep tailing unless the user scrolled up to read history
+      $('terminalNote').textContent = 'live';
+    }).catch(function(){
+      $('terminalNote').textContent = 'unreachable';
+    });
+  }
+
+  function loadConfig(){
+    fetch('/config').then(function(r){ return r.json(); }).then(applyConfig)
+      .catch(function(){ showToast('Could not load config from device', true); });
+  }
+
+  $('btnDiscard').addEventListener('click', function(){
+    if (lastConfig) applyConfig(lastConfig);
+    showToast('Reverted to saved config');
+  });
+
+  $('btnReboot').addEventListener('click', function(){
+    if (!confirm('Reboot the device now? The portal will be unreachable for a few seconds.')) return;
+    var btn = $('btnReboot');
+    btn.disabled = true;
+    btn.textContent = 'Rebooting\u2026';
+    fetch('/reset', { method: 'POST' })
+      .then(function(){
+        showToast('Rebooting \u2014 reconnecting shortly\u2026');
+        var tries = 0;
+        var poll = setInterval(function(){
+          tries++;
+          fetch('/status').then(function(r){
+            if (r.ok){ clearInterval(poll); location.reload(); }
+          }).catch(function(){ /* still down — keep polling */ });
+          if (tries > 30) clearInterval(poll); // ~60s ceiling, give up quietly
+        }, 2000);
+      })
+      .catch(function(){
+        showToast('Rebooting \u2014 reconnecting shortly\u2026');
+      })
+      .finally(function(){
+        btn.disabled = false;
+        btn.textContent = 'Reboot device';
+      });
+  });
+
+  $('btnSave').addEventListener('click', function(){
+    var resetSafetyThreshold = parseInt($('resetSafetyThreshold').value, 10);
+    var noNetworkResetMinutes = parseInt($('noNetworkResetMinutes').value, 10);
+
+    var payload = {
+      deviceName: $('deviceName').value,
+      timezone: $('timezone').value,
+      ssid: $('ssid').value,
+      mqttHost: $('mqttHost').value,
+      mqttPort: parseInt($('mqttPort').value, 10) || 1883,
+      mqttUser: $('mqttUser').value,
+      useSerial: toggles.swSerial,
+      otaEnabled: toggles.swOta,
+      terminalEnabled: toggles.swTerminal,
+      resetSafetyEnabled: toggles.swResetSafety,
+      resetSafetyThreshold: isNaN(resetSafetyThreshold) ? 3 : resetSafetyThreshold,
+      ignoreBootMsg: toggles.swIgnoreBootMsg,
+      useFlashP: toggles.swUseFlashP,
+      noNetworkResetMinutes: isNaN(noNetworkResetMinutes) ? 0 : noNetworkResetMinutes,
+      topicPubAvail: $('topicPubAvail').value,
+      topicPubState: $('topicPubState').value,
+      topicSubCmd: $('topicSubCmd').value,
+      topicGenMessages: $('topicGenMessages').value,
+      topicGenLog: $('topicGenLog').value,
+      topicGenDebug: $('topicGenDebug').value
+    };
+    // only send passwords if the user actually typed something
+    if ($('wifiPwd').value) payload.wifiPwd = $('wifiPwd').value;
+    if ($('mqttPwd').value) payload.mqttPwd = $('mqttPwd').value;
+
+    var btn = $('btnSave');
+    btn.disabled = true;
+    btn.textContent = 'Saving\u2026';
+
+    fetch('/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(e){ throw new Error(e.error || 'Save failed'); });
+      return r.json();
+    }).then(function(){
+      showToast('Saved \u2014 device will apply on next reconnect');
+      $('wifiPwd').value = '';
+      $('mqttPwd').value = '';
+      loadConfig();
+    }).catch(function(err){
+      showToast(err.message, true);
+    }).finally(function(){
+      btn.disabled = false;
+      btn.textContent = 'Save changes';
+    });
+  });
+
+  loadConfig();
+  refreshStatus();
+  setInterval(refreshStatus, 4000);
+  setInterval(refreshLog, 1500);
+})();
+</script>
+</body>
+</html>
