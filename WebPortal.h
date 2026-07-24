@@ -15,6 +15,17 @@ typedef WebServer WebServerImpl;
 
 #include <Arduino.h>
 #include <stdint.h>
+#include "SerialCapture/SerialCapture.h"
+
+// Override PRNT/PRNTL to also feed SerialCapture
+#ifdef PRNT
+#undef PRNT
+#endif
+#ifdef PRNTL
+#undef PRNTL
+#endif
+#define PRNT(a)  do { if (useSerial) Serial.print(a);   SerialCapture::append(a);     } while (0)
+#define PRNTL(a) do { if (useSerial) Serial.println(a); SerialCapture::appendLine(a); } while (0)
 
 // ~~~ Config read shape — secrets replaced with *Set booleans, never echoed back ~~~
 struct WebPortalConfig
