@@ -1,0 +1,21 @@
+{
+  "name": "WebPortal",
+  "version": "0.1.0",
+  "description": "Web config portal for myIOT2 devices",
+  "keywords": ["ESP8266", "ESP32", "IoT", "portal"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/guydvir2/WebPortal"
+  },
+  "authors": {
+    "name": "guydvir2"
+  },
+  "license": "MIT",
+  "frameworks": "arduino",
+  "platforms": ["espressif8266", "espressif32"],
+  "build": {
+    "includeDir": ".",
+    "srcDir": ".",
+    "extraIncludes": ["SerialCapture"]
+  }
+}
