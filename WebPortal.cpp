@@ -1,4 +1,5 @@
 #include "WebPortal.h"
+#include "SerialCapture/SerialCapture.h"
 #include "config_page_gz.h"
 #include <ArduinoJson.h>
 
@@ -60,6 +61,15 @@ void WebPortal::begin(ConfigGetter getCfg, ConfigSetter setCfg, StatusGetter get
 
     _server->onNotFound([this]()
                          { _server->send(404, "text/plain", "not found"); });
+
+    // Start SerialCapture if terminal is enabled in saved config
+    WebPortalConfig cfg;
+    if (_getCfg && _getCfg(cfg) && cfg.terminalEnabled)
+    {
+        SerialCapture::enabled = true;
+        SerialCapture::begin();
+        SerialCapture::restoreFromRTC();
+    }
 
     _server->begin();
     _running = true;
@@ -481,3 +491,4 @@ void WebPortal::_handleButtonPost()
     _buttonCb[idx](idx, state);
     _server->send(200, "application/json", "{\"ok\":true}");
 }
+
