@@ -15,6 +15,7 @@ typedef WebServer WebServerImpl;
 
 #include <Arduino.h>
 #include <stdint.h>
+#include <myJflash.h>
 #include "SerialCapture/SerialCapture.h"
 
 // Override PRNT/PRNTL to also feed SerialCapture
@@ -136,7 +137,7 @@ public:
     typedef bool   (*FileDeleter)(void);    // returns false if delete failed
     typedef void   (*APStarter)(void);
 
-    static const char* version()  { return "0.2 (2026-08-01)"; }
+    static const char* version()  { return "0.3 (2026-08-01)"; }
 
     // Register a button (index 0..3) before calling begin().
     void setButton(uint8_t index, const char *label, bool isToggle, ButtonCallback cb);
@@ -177,6 +178,8 @@ private:
     void _handleDeleteTopics();
     void _handleStartAP();
     void _sendJsonError(int code, const char *msg);
+    bool _loadTerminalEnabled();
+    void _saveTerminalEnabled(bool value);
 };
 
 #endif

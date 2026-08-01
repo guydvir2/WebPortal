@@ -2,6 +2,7 @@
 #include "SerialCapture/SerialCapture.h"
 #include "config_page_gz.h"
 #include <ArduinoJson.h>
+#include <myJflash.h>
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // setButton — call before begin() to register a button slot
@@ -62,17 +63,13 @@ void WebPortal::begin(ConfigGetter getCfg, ConfigSetter setCfg, StatusGetter get
     _server->onNotFound([this]()
                          { _server->send(404, "text/plain", "not found"); });
 
-    // Start SerialCapture if terminal is enabled in saved config
-    WebPortalConfig cfg;
-    if (_getCfg && _getCfg(cfg))
+    // Restore terminal toggle from WebPortal's own flash file (independent of myIOT2)
+    _terminalEnabled = _loadTerminalEnabled();
+    if (_terminalEnabled)
     {
-        _terminalEnabled = cfg.terminalEnabled;
-        if (_terminalEnabled)
-        {
-            SerialCapture::enabled = true;
-            SerialCapture::begin();
-            SerialCapture::restoreFromRTC();
-        }
+        SerialCapture::enabled = true;
+        SerialCapture::begin();
+        SerialCapture::restoreFromRTC();
     }
 
     _server->begin();
@@ -425,6 +422,7 @@ void WebPortal::_handleConfigPost()
     }
 
     _terminalEnabled = upd.terminalEnabled;
+    _saveTerminalEnabled(_terminalEnabled);
     _server->send(200, "application/json", "{\"ok\":true}");
 }
 
@@ -496,4 +494,24 @@ void WebPortal::_handleButtonPost()
     }
     _buttonCb[idx](idx, state);
     _server->send(200, "application/json", "{\"ok\":true}");
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// Terminal toggle persistence — WebPortal-owned, myIOT2 never touches this
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+bool WebPortal::_loadTerminalEnabled()
+{
+    myJflash jf(false);
+    JsonDocument doc;
+    if (!jf.readFile(doc, "/portal.JSON")) return false;
+    return doc["terminalEnabled"] | false;
+}
+
+void WebPortal::_saveTerminalEnabled(bool value)
+{
+    myJflash jf(false);
+    JsonDocument doc;
+    doc["terminalEnabled"] = value;
+    jf.writeFile(doc, "/portal.JSON");
 }
