@@ -63,8 +63,26 @@ void SerialCapture::_appendRaw(const char *data, uint16_t len)
     }
 }
 
-String SerialCapture::getBuffer()
+SerialCaptureSink SerialCaptureStream;
+
+void SerialCapture::appendRaw(const char *data, size_t len)
 {
+    if (!enabled || !_buf)
+        return;
+
+    for (size_t i = 0; i < len; i++)
+    {
+        if (data[i] == '\r')
+            continue; // Print::println() emits CRLF; keep the buffer LF-only
+
+        _appendRaw(&data[i], 1);
+
+        if (data[i] == '\n')
+            _snapshotToRTC(); // throttled internally — cheap per line
+    }
+}
+
+String SerialCapture::getBuffer(){
     if (!_buf || _cap == 0)
         return String("");
 

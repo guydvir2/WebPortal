@@ -4,6 +4,7 @@
 #include <ArduinoJson.h>
 #include <myJflash.h>
 
+extern Print *iotLogSink;
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // setButton — call before begin() to register a button slot
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -65,11 +66,14 @@ void WebPortal::begin(ConfigGetter getCfg, ConfigSetter setCfg, StatusGetter get
 
     // Restore terminal toggle from WebPortal's own flash file (independent of myIOT2)
     _terminalEnabled = _loadTerminalEnabled();
+    Serial.print(F("~ WebPortal: terminalEnabled loaded = "));
+    Serial.println(_terminalEnabled ? "true" : "false");
     if (_terminalEnabled)
     {
         SerialCapture::enabled = true;
         SerialCapture::begin();
         SerialCapture::restoreFromRTC();
+        iotLogSink = &SerialCaptureStream;
     }
 
     _server->begin();
@@ -513,5 +517,9 @@ void WebPortal::_saveTerminalEnabled(bool value)
     myJflash jf(false);
     JsonDocument doc;
     doc["terminalEnabled"] = value;
-    jf.writeFile(doc, "/portal.JSON");
+    bool ok = jf.writeFile(doc, "/portal.JSON");
+    Serial.print(F("~ WebPortal: _saveTerminalEnabled("));
+    Serial.print(value ? "true" : "false");
+    Serial.print(F(") = "));
+    Serial.println(ok ? "OK" : "FAILED");
 }

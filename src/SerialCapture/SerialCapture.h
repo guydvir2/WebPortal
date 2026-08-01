@@ -62,6 +62,12 @@ public:
         _snapshotToRTC(); // throttled internally — cheap to call every line
     }
 
+    // Raw guarded append, used by SerialCaptureSink. Honours `enabled` and a
+    // failed allocation exactly like append() does, strips CR (Print::println
+    // emits CRLF, we store LF only), and triggers the throttled RTC snapshot
+    // when a line completes.
+    static void appendRaw(const char *data, size_t len);
+
     // Full current buffer content, oldest-first. Allocates a String sized
     // to the buffer — fine for occasional portal polling, not for a hot
     // path.
@@ -82,5 +88,33 @@ private:
     static void _appendRaw(const char *data, uint16_t len);
     static void _snapshotToRTC();
 };
+
+// ~~~ Print adapter ~~~
+// Lets SerialCapture be attached to any library exposing a `Print *` log hook
+// — myIOT2 does this via `iotLogSink`. Deriving from Print means every
+// print()/println() overload (String, const char*, int, float, F()) is handled
+// by the core, so there is nothing type-specific to maintain here.
+//
+// Wiring lives in the sketch, not in either library:
+//     iotLogSink = &SerialCaptureStream;
+// so myIOT2 and WebPortal stay mutually unaware.
+class SerialCaptureSink : public Print
+{
+public:
+    size_t write(uint8_t c) override
+    {
+        char ch = (char)c;
+        SerialCapture::appendRaw(&ch, 1);
+        return 1;
+    }
+
+    size_t write(const uint8_t *buffer, size_t size) override
+    {
+        SerialCapture::appendRaw((const char *)buffer, size);
+        return size;
+    }
+};
+
+extern SerialCaptureSink SerialCaptureStream;
 
 #endif
