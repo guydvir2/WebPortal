@@ -1,7 +1,7 @@
 #ifndef WebPortal_h
 #define WebPortal_h
 
-// WebPortal v0.1 — self-contained web config portal for myIOT2 devices.
+// WebPortal v0.2 — self-contained web config portal for myIOT2 devices.
 // Serves a single gzipped page from flash. Decoupled from myIOT2 via callbacks.
 // No internet dependency — works in AP mode or local network.
 
@@ -136,6 +136,8 @@ public:
     typedef bool   (*FileDeleter)(void);    // returns false if delete failed
     typedef void   (*APStarter)(void);
 
+    static const char* version()  { return "0.2 (2026-08-01)"; }
+
     // Register a button (index 0..3) before calling begin().
     void setButton(uint8_t index, const char *label, bool isToggle, ButtonCallback cb);
 
@@ -160,6 +162,7 @@ private:
     ButtonCallback _buttonCb[4]{nullptr, nullptr, nullptr, nullptr};
     WebPortalButton _buttons[4]{};
     bool _running = false;
+    bool _terminalEnabled = false;
 
     static const size_t MAX_BODY_LEN = 1536;
 

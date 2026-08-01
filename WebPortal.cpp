@@ -64,11 +64,15 @@ void WebPortal::begin(ConfigGetter getCfg, ConfigSetter setCfg, StatusGetter get
 
     // Start SerialCapture if terminal is enabled in saved config
     WebPortalConfig cfg;
-    if (_getCfg && _getCfg(cfg) && cfg.terminalEnabled)
+    if (_getCfg && _getCfg(cfg))
     {
-        SerialCapture::enabled = true;
-        SerialCapture::begin();
-        SerialCapture::restoreFromRTC();
+        _terminalEnabled = cfg.terminalEnabled;
+        if (_terminalEnabled)
+        {
+            SerialCapture::enabled = true;
+            SerialCapture::begin();
+            SerialCapture::restoreFromRTC();
+        }
     }
 
     _server->begin();
@@ -125,7 +129,7 @@ void WebPortal::_handleConfigGet()
     doc["mqttPwdSet"] = cfg.mqttPwdSet;
     doc["useSerial"] = cfg.useSerial;
     doc["otaEnabled"] = cfg.otaEnabled;
-    doc["terminalEnabled"] = cfg.terminalEnabled;
+    doc["terminalEnabled"] = _terminalEnabled;
     doc["resetSafetyEnabled"] = cfg.resetSafetyEnabled;
     doc["resetSafetyThreshold"] = cfg.resetSafetyThreshold;
     doc["ignoreBootMsg"] = cfg.ignoreBootMsg;
@@ -176,6 +180,7 @@ void WebPortal::_handleStatusGet()
     doc["resetSafetyEnabled"] = st.resetSafetyEnabled;
     doc["resetSafetyCounter"] = st.resetSafetyCounter;
     doc["resetSafetyBootWasNormal"] = st.resetSafetyBootWasNormal;
+    doc["portalVersion"] = version();
 
     JsonArray custom = doc["customStatus"].to<JsonArray>();
     for (uint8_t i = 0; i < WebPortalStatus::CUSTOM_STATUS_SLOTS; i++)
@@ -419,6 +424,7 @@ void WebPortal::_handleConfigPost()
         return;
     }
 
+    _terminalEnabled = upd.terminalEnabled;
     _server->send(200, "application/json", "{\"ok\":true}");
 }
 
@@ -491,4 +497,3 @@ void WebPortal::_handleButtonPost()
     _buttonCb[idx](idx, state);
     _server->send(200, "application/json", "{\"ok\":true}");
 }
-
