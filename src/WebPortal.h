@@ -1,3 +1,4 @@
+// Updated: 2026-08-05
 #ifndef WebPortal_h
 #define WebPortal_h
 
@@ -36,11 +37,11 @@ struct WebPortalConfig
     bool mqttPwdSet = false;
     bool useSerial = true;
     bool otaEnabled = false;
-    bool terminalEnabled = false;
+    // terminalEnabled intentionally absent here: WebPortal owns it in its own
+    // /portal.JSON and ignores anything the app reports. See WebPortalConfigUpdate.
     bool resetSafetyEnabled = false;
     uint8_t resetSafetyThreshold = 3;
     bool ignoreBootMsg = false;
-    bool useFlashP = false;
     uint8_t noNetworkResetMinutes = 4;
     char topicPubAvail[32]{};
     char topicPubState[32]{};
@@ -70,7 +71,6 @@ struct WebPortalConfigUpdate
     bool resetSafetyEnabled = false;
     uint8_t resetSafetyThreshold = 3;
     bool ignoreBootMsg = false;
-    bool useFlashP = false;
     uint8_t noNetworkResetMinutes = 4;
     char topicPubAvail[32]{};
     char topicPubState[32]{};
@@ -103,12 +103,15 @@ struct WebPortalStatus
     char deviceId[24]{};
     char primaryTopic[64]{};
     bool ignoreBootMsg = false;
-    bool useFlashP = false;
     uint8_t noNetworkResetMinutes = 0;
     char espType[10]{};
     bool resetSafetyEnabled = false;
     uint8_t resetSafetyCounter = 0;
     bool resetSafetyBootWasNormal = true;
+
+    // myIOT2 library version. WebPortal deliberately does not include myIOT2.h,
+    // so the app fills this in onGetStatus() from iot.getVersion().
+    char iotVersion[16]{};
 
     // Custom read-only rows shown in the Device Data section.
     // Leave label empty to skip that slot.
@@ -132,7 +135,11 @@ public:
     typedef bool   (*FileDeleter)(void);    // returns false if delete failed
     typedef void   (*APStarter)(void);
 
-    static const char* version()  { return "0.3 (2026-08-01)"; }
+    static const char* version()  { return "0.3 (2026-08-05)"; }
+
+    // Identify the sketch running on top of the portal. Call before begin().
+    // Shown in the portal's Versions panel alongside the library versions.
+    void setAppInfo(const char *name, const char *ver);
 
     // Register a button (index 0..3) before calling begin().
     void setButton(uint8_t index, const char *label, bool isToggle, ButtonCallback cb);
@@ -152,6 +159,9 @@ private:
     StatusGetter  _getStatus = nullptr;
     LogGetter     _getLog = nullptr;
     ResetRequester _requestReset = nullptr;
+    char _appName[24]{};
+    char _appVersion[16]{};
+
     FileDeleter _deleteConfig = nullptr;
     FileDeleter _deleteTopics = nullptr;
     APStarter   _startAP = nullptr;

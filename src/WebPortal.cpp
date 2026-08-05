@@ -1,3 +1,4 @@
+// Updated: 2026-08-05
 #include "WebPortal.h"
 #include "SerialCapture/SerialCapture.h"
 #include "config_page_gz.h"
@@ -66,8 +67,6 @@ void WebPortal::begin(ConfigGetter getCfg, ConfigSetter setCfg, StatusGetter get
 
     // Restore terminal toggle from WebPortal's own flash file (independent of myIOT2)
     _terminalEnabled = _loadTerminalEnabled();
-    Serial.print(F("~ WebPortal: terminalEnabled loaded = "));
-    Serial.println(_terminalEnabled ? "true" : "false");
     if (_terminalEnabled)
     {
         SerialCapture::enabled = true;
@@ -134,7 +133,6 @@ void WebPortal::_handleConfigGet()
     doc["resetSafetyEnabled"] = cfg.resetSafetyEnabled;
     doc["resetSafetyThreshold"] = cfg.resetSafetyThreshold;
     doc["ignoreBootMsg"] = cfg.ignoreBootMsg;
-    doc["useFlashP"] = cfg.useFlashP;
     doc["noNetworkResetMinutes"] = cfg.noNetworkResetMinutes;
     doc["topicPubAvail"] = cfg.topicPubAvail;
     doc["topicPubState"] = cfg.topicPubState;
@@ -175,13 +173,15 @@ void WebPortal::_handleStatusGet()
     doc["deviceId"] = st.deviceId;
     doc["primaryTopic"] = st.primaryTopic;
     doc["ignoreBootMsg"] = st.ignoreBootMsg;
-    doc["useFlashP"] = st.useFlashP;
     doc["noNetworkResetMinutes"] = st.noNetworkResetMinutes;
     doc["espType"] = st.espType;
     doc["resetSafetyEnabled"] = st.resetSafetyEnabled;
     doc["resetSafetyCounter"] = st.resetSafetyCounter;
     doc["resetSafetyBootWasNormal"] = st.resetSafetyBootWasNormal;
     doc["portalVersion"] = version();
+    doc["iotVersion"]    = st.iotVersion;
+    doc["appName"]       = _appName;
+    doc["appVersion"]    = _appVersion;
 
     JsonArray custom = doc["customStatus"].to<JsonArray>();
     for (uint8_t i = 0; i < WebPortalStatus::CUSTOM_STATUS_SLOTS; i++)
@@ -215,12 +215,10 @@ void WebPortal::_handleStatusGet()
 
 void WebPortal::_handleLogGet()
 {
-    if (!_getLog)
-    {
-        _server->send(200, "text/plain", "(terminal not wired up on this device)");
-        return;
-    }
-    String log = _getLog();
+    // SerialCapture is WebPortal's own internal buffer, so when the app does not
+    // override _getLog we read it directly here. This is what lets user code
+    // pass nullptr instead of referencing SerialCapture:: itself.
+    String log = _getLog ? _getLog() : SerialCapture::getBuffer();
     if (log.length() == 0)
     {
         _server->send(200, "text/plain", "(terminal capture is off — enable it in Device Behavior, then reboot)");
@@ -395,7 +393,6 @@ void WebPortal::_handleConfigPost()
     upd.resetSafetyEnabled = doc["resetSafetyEnabled"] | false;
     upd.resetSafetyThreshold = (uint8_t)resetSafetyThreshold;
     upd.ignoreBootMsg = doc["ignoreBootMsg"] | false;
-    upd.useFlashP = doc["useFlashP"] | false;
     upd.noNetworkResetMinutes = (uint8_t)noNetworkResetMinutes;
     strlcpy(upd.topicPubAvail, topicPubAvail, sizeof(upd.topicPubAvail));
     strlcpy(upd.topicPubState, topicPubState, sizeof(upd.topicPubState));
@@ -433,12 +430,24 @@ void WebPortal::_handleConfigPost()
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
+void WebPortal::setAppInfo(const char *name, const char *ver)
+{
+    if (name) strlcpy(_appName,    name, sizeof(_appName));
+    if (ver)  strlcpy(_appVersion, ver,  sizeof(_appVersion));
+}
+
 void WebPortal::_handleDeleteConfig()
 {
     if (!_deleteConfig) { _sendJsonError(500, "not wired up"); return; }
-    _server->send(200, "application/json", "{\"ok\":true,\"message\":\"credentials deleted, rebooting\"}");
-    delay(300);
-    _deleteConfig();
+
+    // Was previously replying 200 "rebooting" BEFORE calling _deleteConfig()
+    // and discarding its result — so the UI reported success unconditionally,
+    // and nothing ever rebooted. Do the work first, then report what happened.
+    bool ok = _deleteConfig();
+    if (ok)
+        _server->send(200, "application/json", "{\"ok\":true,\"message\":\"credentials deleted, reboot to apply\"}");
+    else
+        _sendJsonError(500, "failed to delete credentials file");
 }
 
 void WebPortal::_handleDeleteTopics()
@@ -517,9 +526,6 @@ void WebPortal::_saveTerminalEnabled(bool value)
     myJflash jf(false);
     JsonDocument doc;
     doc["terminalEnabled"] = value;
-    bool ok = jf.writeFile(doc, "/portal.JSON");
-    Serial.print(F("~ WebPortal: _saveTerminalEnabled("));
-    Serial.print(value ? "true" : "false");
-    Serial.print(F(") = "));
-    Serial.println(ok ? "OK" : "FAILED");
+    if (!jf.writeFile(doc, "/portal.JSON"))
+        Serial.println(F("~ WebPortal: failed to save terminal setting"));
 }

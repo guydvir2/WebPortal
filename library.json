@@ -1,6 +1,6 @@
 {
     "name": "WebPortal",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "Self-contained web config portal for myIOT2 devices. Serves a local config page, captures serial log output. Optional — myIOT2 runs without it.",
     "keywords": "iot, web, portal, esp8266, esp32",
     "repository": {

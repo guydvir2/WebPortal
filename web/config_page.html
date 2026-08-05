@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Updated: 2026-08-05 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -11,7 +12,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:radial-gradient(circle at 15% 0%,#1a2028 0%,var(--bg) 45%);color:var(--text);
 font-family:var(--sans);min-height:100vh;padding:28px 16px 60px}
-.wrap{max-width:480px;margin:0 auto}
+.wrap{max-width:620px;margin:0 auto}
 header{margin-bottom:16px}
 .device-id{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--text-dim);
 text-transform:uppercase;margin:0 0 4px}
@@ -26,7 +27,7 @@ letter-spacing:.04em;color:var(--text-dim)}
 .dot.warn{background:var(--amber);box-shadow:0 0 6px rgba(232,163,61,.7)}
 .dot.off{background:var(--red);box-shadow:0 0 6px rgba(232,84,61,.5)}
 
-.tabs{display:flex;gap:6px;margin:16px 0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0}
 .tabs::-webkit-scrollbar{display:none}
 .tab-btn{flex-shrink:0;font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--text-dim);
 background:transparent;border:1px solid var(--panel-edge);border-radius:8px;padding:8px 14px;
@@ -87,6 +88,17 @@ padding:11px 18px;border-radius:8px;opacity:0;transition:all .25s ease;font-fami
 pointer-events:none;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast.err{border-color:var(--red)}
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 0 8px}
+.maint-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:4px 0 8px}
+.maint-btn{font-family:var(--sans);font-size:13px;font-weight:600;padding:11px 10px;border-radius:8px;border:1px solid var(--red);cursor:pointer;background:transparent;color:var(--red);transition:all .15s ease;width:100%}
+.maint-btn:hover{background:rgba(255,80,80,0.1)}
+.maint-full{display:block;margin-bottom:10px}
+.dev-btn{font-family:var(--sans);font-size:13px;font-weight:600;padding:11px 10px;border-radius:8px;
+border:1px solid var(--panel-edge);cursor:pointer;transition:all .15s ease;text-align:center;
+background:#0F1319;color:var(--text-dim)}
+.dev-btn:not(:disabled):hover{border-color:var(--amber);color:var(--text)}
+.dev-btn.toggle-on{background:var(--amber-dim);border-color:var(--amber);color:var(--amber)}
+.dev-btn:disabled{opacity:.35;cursor:default}
 </style>
 </head>
 <body>
@@ -108,19 +120,30 @@ pointer-events:none;max-width:90vw;text-align:center}
     <button class="tab-btn" data-tab="topics">Topics</button>
     <button class="tab-btn" data-tab="behavior">Behavior</button>
     <button class="tab-btn" id="tabBtnTerminal" data-tab="terminal" style="display:none">Terminal</button>
+    <button class="tab-btn" data-tab="maintenance">Maintenance</button>
   </div>
 
   <div class="tab-content active" data-tab="status">
     <section>
-      <div class="sec-head"><span class="sec-title">Status</span><span class="sec-note">mirrors serial boot log</span></div>
+      <div class="sec-head"><span class="sec-title">Parameters</span><span class="sec-note">mirrors serial boot log</span></div>
       <div class="topic-list" id="statusList">&hellip;</div>
     </section>
 
-    <section>
-      <div class="sec-head"><span class="sec-title">Device</span><span class="sec-note"></span></div>
-      <div class="field"><label>Device name</label><input type="text" id="deviceName" maxlength="31" placeholder="e.g. Bedroom Curtain"></div>
-      <div class="field"><label>Timezone (POSIX TZ string)</label><input type="text" id="timezone" maxlength="47" placeholder="IST-2IDT,M3.4.4/26,M10.5.0"></div>
+    <section id="deviceDataSection" style="display:none">
+      <div class="sec-head"><span class="sec-title">Device Data</span><span class="sec-note">live</span></div>
+      <div class="topic-list" id="deviceDataList"></div>
     </section>
+
+    <section id="buttonsSection" style="display:none">
+      <div class="sec-head"><span class="sec-title">Controls</span><span class="sec-note">device-defined</span></div>
+      <div class="btn-grid" id="btnGrid"></div>
+    </section>
+
+    <section>
+      <div class="sec-head"><span class="sec-title">Versions</span><span class="sec-note">build info</span></div>
+      <div class="topic-list" id="versionList">&hellip;</div>
+    </section>
+
   </div>
 
   <div class="tab-content" data-tab="network">
@@ -141,17 +164,41 @@ pointer-events:none;max-width:90vw;text-align:center}
         <div class="field"><label>Password</label><input type="password" id="mqttPwd" maxlength="63" placeholder="unchanged"></div>
       </div>
     </section>
+
+    <section>
+      <div class="sec-head"><span class="sec-title">Device</span><span class="sec-note"></span></div>
+      <div class="field"><label>Device name</label><input type="text" id="deviceName" maxlength="31" placeholder="e.g. Bedroom Curtain"></div>
+      <div class="field"><label>Timezone (POSIX TZ string)</label><input type="text" id="timezone" maxlength="47" placeholder="IST-2IDT,M3.4.4/26,M10.5.0"></div>
+    </section>
   </div>
 
   <div class="tab-content" data-tab="topics">
     <section>
       <div class="sec-head"><span class="sec-title">Topics</span><span class="sec-note" id="topicsReadyNote">&hellip;</span></div>
-      <div class="field"><label>Command topic (required)</label><input type="text" id="topicSubCmd" maxlength="63" placeholder="myHome/DeviceName"></div>
-      <div class="field"><label>Availability topic (derived)</label><input type="text" id="topicPubAvail" maxlength="63" readonly></div>
-      <div class="field"><label>State topic (derived)</label><input type="text" id="topicPubState" maxlength="63" readonly></div>
-      <div class="field"><label>Messages topic (optional)</label><input type="text" id="topicGenMessages" maxlength="63" placeholder="myHome/Messages"></div>
-      <div class="field"><label>Log topic (optional)</label><input type="text" id="topicGenLog" maxlength="63" placeholder="myHome/log"></div>
-      <div class="field"><label>Debug topic (optional)</label><input type="text" id="topicGenDebug" maxlength="63" placeholder="myHome/debug"></div>
+      <div class="field"><label>Command topic (required)</label><input type="text" id="topicSubCmd" maxlength="31" placeholder="myHome/DeviceName"></div>
+      <div class="field"><label>Availability topic (derived)</label><input type="text" id="topicPubAvail" maxlength="31" readonly></div>
+      <div class="field"><label>State topic (derived)</label><input type="text" id="topicPubState" maxlength="31" readonly></div>
+      <div class="field"><label>Messages topic (optional)</label><input type="text" id="topicGenMessages" maxlength="31" placeholder="myHome/Messages"></div>
+      <div class="field"><label>Log topic (optional)</label><input type="text" id="topicGenLog" maxlength="31" placeholder="myHome/log"></div>
+      <div class="field"><label>Debug topic (optional)</label><input type="text" id="topicGenDebug" maxlength="31" placeholder="myHome/debug"></div>
+    </section>
+
+    <section>
+      <div class="sec-head"><span class="sec-title">Extra Publish</span><span class="sec-note">optional</span></div>
+      <div class="field"><label>Pub 1</label><input type="text" id="extraPub0" maxlength="31" placeholder="myHome/device/extra1"></div>
+      <div class="field"><label>Pub 2</label><input type="text" id="extraPub1" maxlength="31" placeholder=""></div>
+      <div class="field"><label>Pub 3</label><input type="text" id="extraPub2" maxlength="31" placeholder=""></div>
+      <div class="field"><label>Pub 4</label><input type="text" id="extraPub3" maxlength="31" placeholder=""></div>
+      <div class="field"><label>Pub 5</label><input type="text" id="extraPub4" maxlength="31" placeholder=""></div>
+    </section>
+
+    <section>
+      <div class="sec-head"><span class="sec-title">Extra Subscribe</span><span class="sec-note">optional</span></div>
+      <div class="field"><label>Sub 1</label><input type="text" id="extraSub0" maxlength="31" placeholder="myHome/device/cmd2"></div>
+      <div class="field"><label>Sub 2</label><input type="text" id="extraSub1" maxlength="31" placeholder=""></div>
+      <div class="field"><label>Sub 3</label><input type="text" id="extraSub2" maxlength="31" placeholder=""></div>
+      <div class="field"><label>Sub 4</label><input type="text" id="extraSub3" maxlength="31" placeholder=""></div>
+      <div class="field"><label>Sub 5</label><input type="text" id="extraSub4" maxlength="31" placeholder=""></div>
     </section>
   </div>
 
@@ -178,10 +225,7 @@ pointer-events:none;max-width:90vw;text-align:center}
         <div><div class="toggle-label">Ignore boot message</div><div class="toggle-sub">Suppress the "PowerON Boot" MQTT log line</div></div>
         <div class="switch" id="swIgnoreBootMsg" data-key="ignoreBootMsg"></div>
       </div>
-      <div class="toggle-row">
-        <div><div class="toggle-label">Flash parameters</div><div class="toggle-sub">Enable the on-flash parameter file system</div></div>
-        <div class="switch" id="swUseFlashP" data-key="useFlashP"></div>
-      </div>
+      
       <div class="toggle-row">
         <div><div class="toggle-label">Net-loss reset</div><div class="toggle-sub">Minutes of no network before rebooting (0 = never)</div></div>
         <input type="text" id="noNetworkResetMinutes" maxlength="3" class="mini-input">
@@ -189,6 +233,21 @@ pointer-events:none;max-width:90vw;text-align:center}
       <div class="toggle-row">
         <div><div class="toggle-label">Reset-safety threshold</div><div class="toggle-sub">Consecutive failed boots before it triggers</div></div>
         <input type="text" id="resetSafetyThreshold" maxlength="2" class="mini-input">
+      </div>
+    </section>
+  </div>
+
+  <div class="tab-content" data-tab="maintenance">
+    <section>
+      <div class="sec-head"><span class="sec-title">System</span><span class="sec-note">reboot &amp; reset</span></div>
+      <button class="maint-btn maint-full" id="btnReboot">Reboot device</button>
+      <button class="maint-btn maint-full" id="btnStartAP">Switch to AP mode</button>
+    </section>
+    <section>
+      <div class="sec-head"><span class="sec-title">Danger Zone</span><span class="sec-note">destructive — cannot be undone</span></div>
+      <div class="maint-grid">
+        <button class="maint-btn" id="btnDeleteTopics">Delete topics</button>
+        <button class="maint-btn" id="btnDeleteConfig">Delete credentials</button>
       </div>
     </section>
   </div>
@@ -207,7 +266,7 @@ pointer-events:none;max-width:90vw;text-align:center}
     <button class="btn-primary" id="btnSave">Save changes</button>
   </div>
   <div class="actions">
-    <button class="btn-ghost" id="btnReboot" style="width:100%;border-color:var(--red);color:var(--red)">Reboot device</button>
+
   </div>
 
   <footer>myIOT v3 &middot; served locally, no cloud round-trip</footer>
@@ -267,19 +326,73 @@ pointer-events:none;max-width:90vw;text-align:center}
       ['ESP type', s.espType],
       ['Reset-safety', s.resetSafetyEnabled ? 'on' : 'off'],
       ['Ignore boot msg', s.ignoreBootMsg ? 'yes' : 'no'],
-      ['Flash params', s.useFlashP ? 'on' : 'off'],
       ['Net-loss reset', s.noNetworkResetMinutes > 0 ? (s.noNetworkResetMinutes + ' min') : 'off']
     ];
     if (s.resetSafetyEnabled){
       rows.push(['Reset-safety counter', String(s.resetSafetyCounter)]);
       rows.push(['Last boot', s.resetSafetyBootWasNormal ? 'normal' : 'failure']);
     }
-    if (s.customStatus && s.customStatus.length){
-      s.customStatus.forEach(function(row){ rows.push([row.label, row.value]); });
-    }
     $('statusList').innerHTML = rows.map(function(r){
       return '<div><span class="k">' + r[0] + '</span> ' + r[1] + '</div>';
     }).join('');
+
+    // Versions panel — app identity plus both library versions
+    var vrows = [];
+    if (s.appName)       vrows.push(['Application', s.appName + (s.appVersion ? ' ' + s.appVersion : '')]);
+    if (s.iotVersion)    vrows.push(['myIOT2', s.iotVersion]);
+    if (s.portalVersion) vrows.push(['WebPortal', s.portalVersion]);
+    if (!vrows.length)   vrows.push(['Versions', 'not reported']);
+    $('versionList').innerHTML = vrows.map(function(r){
+      return '<div><span class="k">' + r[0] + '</span> ' + r[1] + '</div>';
+    }).join('');
+
+    // Device Data section — custom slots from onGetStatus()
+    var dataSection = $('deviceDataSection');
+    if (s.customStatus && s.customStatus.length){
+      $('deviceDataList').innerHTML = s.customStatus.map(function(row){
+        return '<div><span class="k">' + row.label + '</span> ' + row.value + '</div>';
+      }).join('');
+      dataSection.style.display = '';
+    } else {
+      dataSection.style.display = 'none';
+    }
+
+    // Buttons section
+    var btnSection = $('buttonsSection');
+    var btnGrid = $('btnGrid');
+    if (s.buttons && s.buttons.length) {
+      var anyEnabled = s.buttons.some(function(b){ return b.enabled; });
+      btnSection.style.display = anyEnabled ? '' : 'none';
+      btnGrid.innerHTML = s.buttons.map(function(b, i){
+        var isOn = b.isToggle && b.toggleState;
+        var cls = 'dev-btn' + (isOn ? ' toggle-on' : '');
+        var label = b.label || ('Button ' + (i+1));
+        return '<button class="' + cls + '" ' +
+          (b.enabled ? '' : 'disabled ') +
+          'data-idx="' + i + '" data-toggle="' + b.isToggle + '" data-state="' + b.toggleState + '">' +
+          label + '</button>';
+      }).join('');
+      // attach click handlers
+      btnGrid.querySelectorAll('.dev-btn:not(:disabled)').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var idx = parseInt(btn.dataset.idx);
+          var isToggle = btn.dataset.toggle === 'true';
+          var newState = isToggle ? !(btn.dataset.state === 'true') : true;
+          fetch('/button', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({index: idx, state: newState})
+          }).then(function(r){ if (!r.ok) throw new Error(); })
+          .catch(function(){ showToast('Button action failed', true); });
+          if (isToggle) {
+            btn.dataset.state = String(newState);
+            btn.className = 'dev-btn' + (newState ? ' toggle-on' : '');
+          }
+        });
+      });
+    } else {
+      btnSection.style.display = 'none';
+    }
   }
 
   function applyConfig(c){
@@ -302,7 +415,6 @@ pointer-events:none;max-width:90vw;text-align:center}
     setToggle('swTerminal', c.terminalEnabled);
     setToggle('swResetSafety', c.resetSafetyEnabled);
     setToggle('swIgnoreBootMsg', c.ignoreBootMsg);
-    setToggle('swUseFlashP', c.useFlashP);
     $('noNetworkResetMinutes').value = c.noNetworkResetMinutes;
     $('resetSafetyThreshold').value = c.resetSafetyThreshold;
 
@@ -315,6 +427,8 @@ pointer-events:none;max-width:90vw;text-align:center}
     $('topicGenLog').value = c.topicGenLog || '';
     $('topicGenDebug').value = c.topicGenDebug || '';
     $('topicsReadyNote').textContent = c.topicsReady ? 'active' : 'not set — MQTT idle';
+    if (c.extraPub) c.extraPub.forEach(function(v,i){ $('extraPub'+i).value = v || ''; });
+    if (c.extraSub) c.extraSub.forEach(function(v,i){ $('extraSub'+i).value = v || ''; });
 
     deriveFromCmd(); // Avail/State are always <cmd>/Avail and <cmd>/State — no exceptions
   }
@@ -340,9 +454,30 @@ pointer-events:none;max-width:90vw;text-align:center}
     });
   });
 
+  var _statusFailCount = 0;
+  var _statusLost = false;
+
+  function _markUnreachable(){
+    _statusLost = true;
+    setDot('ledWifi', 'off');
+    setDot('ledMqtt', 'off');
+    setDot('ledNtp',  'off');
+    setDot('ledOta',  'off');
+    $('deviceId').textContent = 'portal unreachable…';
+  }
+
   function refreshStatus(){
-    fetch('/status').then(function(r){ return r.json(); }).then(applyStatus)
-      .catch(function(){ /* device may be mid-reconnect; ignore single failed poll */ });
+    fetch('/status').then(function(r){ return r.json(); }).then(function(s){
+      _statusFailCount = 0;
+      if (_statusLost) {
+        _statusLost = false;
+        $('deviceId').textContent = ''; // will be filled by applyStatus
+      }
+      applyStatus(s);
+    }).catch(function(){
+      _statusFailCount++;
+      if (_statusFailCount >= 2) _markUnreachable(); // 2 misses = ~8s before going red
+    });
   }
 
   function refreshLog(){
@@ -411,7 +546,6 @@ pointer-events:none;max-width:90vw;text-align:center}
       resetSafetyEnabled: toggles.swResetSafety,
       resetSafetyThreshold: isNaN(resetSafetyThreshold) ? 3 : resetSafetyThreshold,
       ignoreBootMsg: toggles.swIgnoreBootMsg,
-      useFlashP: toggles.swUseFlashP,
       noNetworkResetMinutes: isNaN(noNetworkResetMinutes) ? 0 : noNetworkResetMinutes,
       topicPubAvail: $('topicPubAvail').value,
       topicPubState: $('topicPubState').value,
@@ -420,6 +554,10 @@ pointer-events:none;max-width:90vw;text-align:center}
       topicGenLog: $('topicGenLog').value,
       topicGenDebug: $('topicGenDebug').value
     };
+    for (var i = 0; i < 5; i++) {
+      payload['extraPub' + i] = $('extraPub' + i).value;
+      payload['extraSub' + i] = $('extraSub' + i).value;
+    }
     // only send passwords if the user actually typed something
     if ($('wifiPwd').value) payload.wifiPwd = $('wifiPwd').value;
     if ($('mqttPwd').value) payload.mqttPwd = $('mqttPwd').value;
@@ -451,6 +589,42 @@ pointer-events:none;max-width:90vw;text-align:center}
   loadConfig();
   refreshStatus();
   setInterval(refreshStatus, 4000);
+
+  // Maintenance buttons
+  $('btnDeleteTopics').addEventListener('click', function(){
+    if (!confirm('Delete topics? MQTT will be idle until reconfigured.')) return;
+    fetch('/delete-topics', {method:'POST'})
+      .then(function(r){
+        if (!r.ok) return r.json().then(function(e){ throw new Error(e.error || 'Delete failed'); });
+        return r.json();
+      })
+      .then(function(j){
+        showToast(j.message || 'Topics deleted');
+        loadConfig();    // clear the stale topic fields, otherwise the next
+                         // "Save changes" writes them straight back to flash
+      })
+      .catch(function(err){ showToast(err.message || 'Failed', true); });
+  });
+  $('btnDeleteConfig').addEventListener('click', function(){
+    if (!confirm('Delete WiFi & MQTT credentials? Device will reboot to defaults.')) return;
+    fetch('/delete-config', {method:'POST'})
+      .then(function(r){
+        if (!r.ok) return r.json().then(function(e){ throw new Error(e.error || 'Delete failed'); });
+        return r.json();
+      })
+      .then(function(j){
+        showToast(j.message || 'Credentials deleted');
+        loadConfig();
+      })
+      .catch(function(err){ showToast(err.message || 'Failed', true); });
+  });
+  $('btnStartAP').addEventListener('click', function(){
+    if (!confirm('Switch to AP mode? Connect to ESP_XXXXXX at 192.168.4.1')) return;
+    fetch('/start-ap', {method:'POST'})
+      .then(function(r){ return r.json(); })
+      .then(function(j){ showToast(j.message || 'Switching to AP mode'); })
+      .catch(function(){ showToast('Failed', true); });
+  });
   setInterval(refreshLog, 1500);
 })();
 </script>
